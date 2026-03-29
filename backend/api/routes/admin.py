@@ -1,7 +1,7 @@
 """관리자 API — 기사 관리, 용어 사전, API 사용량"""
 
 import json
-from fastapi import APIRouter, Depends, Body
+from fastapi import APIRouter, Depends, Body, HTTPException
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database.connection import get_db
@@ -22,7 +22,7 @@ async def update_article_score(
     """기사 중요도 수동 수정"""
     article = await db.get(Article, article_id)
     if not article:
-        return {"error": "기사를 찾을 수 없습니다."}
+        raise HTTPException(status_code=404, detail="기사를 찾을 수 없습니다.")
     article.importance_score = importance_score
     await db.commit()
     return {"updated": True, "article_id": article_id, "importance_score": importance_score}
@@ -33,7 +33,7 @@ async def delete_article(article_id: str, db: AsyncSession = Depends(get_db)):
     """기사 삭제"""
     article = await db.get(Article, article_id)
     if not article:
-        return {"error": "기사를 찾을 수 없습니다."}
+        raise HTTPException(status_code=404, detail="기사를 찾을 수 없습니다.")
     await db.delete(article)
     await db.commit()
     return {"deleted": True, "article_id": article_id}
@@ -57,7 +57,7 @@ async def update_glossary_term(
     """용어 번역 수정"""
     entry = await db.get(Glossary, glossary_id)
     if not entry:
-        return {"error": "용어를 찾을 수 없습니다."}
+        raise HTTPException(status_code=404, detail="용어를 찾을 수 없습니다.")
     entry.term_ko = term_ko
     await db.commit()
     return {"updated": True, "term_en": entry.term_en, "term_ko": term_ko}
@@ -68,7 +68,7 @@ async def delete_glossary_term(glossary_id: str, db: AsyncSession = Depends(get_
     """용어 삭제"""
     entry = await db.get(Glossary, glossary_id)
     if not entry:
-        return {"error": "용어를 찾을 수 없습니다."}
+        raise HTTPException(status_code=404, detail="용어를 찾을 수 없습니다.")
     await db.delete(entry)
     await db.commit()
     return {"deleted": True, "term_en": entry.term_en}

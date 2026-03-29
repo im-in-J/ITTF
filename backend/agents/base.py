@@ -65,7 +65,10 @@ async def run_agent_loop(
         tool_results = []
         for block in response.content:
             if block.type == "tool_use":
-                result = await tool_executor(block.name, block.input)
+                try:
+                    result = await tool_executor(block.name, block.input)
+                except Exception as e:
+                    result = {"error": f"도구 실행 실패 ({block.name}): {str(e)}"}
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": block.id,

@@ -1,7 +1,18 @@
 const API_BASE = "/api";
 
+function adminHeaders(): HeadersInit {
+  const key =
+    typeof window !== "undefined"
+      ? localStorage.getItem("admin_api_key") ?? ""
+      : "";
+  return key ? { "X-Admin-Key": key } : {};
+}
+
 async function fetcher<T>(url: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`);
+  const isAdmin = url.startsWith("/admin");
+  const res = await fetch(`${API_BASE}${url}`, {
+    headers: isAdmin ? adminHeaders() : {},
+  });
   if (!res.ok) throw new Error(`API 오류: ${res.status}`);
   return res.json();
 }
@@ -86,6 +97,7 @@ export function fetchPipelineHistory(limit = 10) {
 export function triggerPipeline(useAi = false) {
   return fetch(`${API_BASE}/admin/pipeline/run?use_ai=${useAi}`, {
     method: "POST",
+    headers: adminHeaders(),
   }).then((r) => r.json());
 }
 

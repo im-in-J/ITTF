@@ -1,11 +1,15 @@
 """기사 API — 목록, 상세, 검색"""
 
 import json
-from fastapi import APIRouter, Depends, Query
+import re
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import select, func, desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database.connection import get_db
 from backend.database.models import Article, Comment, User
+
+# 허용된 기업 이름 패턴 (영문, 숫자, 공백, /, - 만 허용)
+_SAFE_COMPANY_RE = re.compile(r"^[A-Za-z0-9 /\-]+$")
 
 router = APIRouter(prefix="/api/articles", tags=["기사"])
 
@@ -24,6 +28,8 @@ async def list_articles(
     stmt = select(Article).where(Article.importance_score >= min_score)
 
     if company:
+        if not _SAFE_COMPANY_RE.match(company):
+            raise HTTPException(status_code=400, detail="유효하지 않은 기업명입니다.")
         stmt = stmt.where(Article.company_tags.contains(f'"{company}"'))
     if source_type:
         stmt = stmt.where(Article.source_type == source_type)
@@ -55,7 +61,7 @@ async def get_article(article_id: str, db: AsyncSession = Depends(get_db)):
     """기사 상세 조회"""
     article = await db.get(Article, article_id)
     if not article:
-        return {"error": "기사를 찾을 수 없습니다."}
+        raise HTTPException(status_code=404, detail="기사를 찾을 수 없습니다.")
     return _article_to_dict(article, include_body=True)
 
 
@@ -100,6 +106,16 @@ async def get_comments(article_id: str, db: AsyncSession = Depends(get_db)):
     return {"article_id": article_id, "comments": items}
 
 
+def _safe_json_loads(value: str | None, default):
+    """JSON 파싱 실패 시 기본값 반환"""
+    if not value:
+        return default
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return default
+
+
 def _article_to_dict(article: Article, include_body: bool = False) -> dict:
     """Article 모델을 딕셔너리로 변환한다."""
     data = {
@@ -109,11 +125,11 @@ def _article_to_dict(article: Article, include_body: bool = False) -> dict:
         "url": article.url,
         "source_name": article.source_name,
         "source_type": article.source_type,
-        "company_tags": json.loads(article.company_tags) if article.company_tags else [],
-        "category_tags": json.loads(article.category_tags) if article.category_tags else [],
+        "company_tags": _safe_json_loads(article.company_tags, []),
+        "category_tags": _safe_json_loads(article.category_tags, []),
         "importance_score": article.importance_score,
         "evaluation_reason": article.evaluation_reason,
-        "insights": json.loads(article.insights) if article.insights else None,
+        "insights": _safe_json_loads(article.insights, None),
         "published_at": article.published_at.isoformat() if article.published_at else None,
         "crawled_at": article.crawled_at.isoformat() if article.crawled_at else None,
     }

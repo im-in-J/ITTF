@@ -256,7 +256,7 @@ async def _run_direct_crawling(session, run_id: str) -> dict:
             for rss_suffix in ["/feed/", "/rss/", "/atom.xml", "/feed"]:
                 rss_url = url.rstrip("/") + rss_suffix
                 result = await fetch_url(rss_url)
-                if result["success"] and "<?xml" in result["html"][:200].lower() or "<rss" in result["html"][:500].lower() or "<feed" in result["html"][:500].lower():
+                if result["success"] and ("<?xml" in result["html"][:200].lower() or "<rss" in result["html"][:500].lower() or "<feed" in result["html"][:500].lower()):
                     articles = parse_rss(result["html"])
                     strategy = "rss"
                     for a in articles:
@@ -301,7 +301,7 @@ async def _run_direct_crawling(session, run_id: str) -> dict:
         stat = {
             "source_name": name,
             "strategy_used": strategy,
-            "success": count > 0 or True,  # 0개여도 시도는 성공
+            "success": True,  # 크롤링 시도 자체는 성공 (에러 발생 시 except에서 처리)
             "articles_found": count,
         }
         source_stats.append(stat)
