@@ -1,9 +1,12 @@
 """ITTF 프로젝트 설정 — 크롤링 소스, 키워드, 기업 가중치"""
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# 프로젝트 루트 디렉토리
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_ROOT / ".env")
 
 # === Anthropic API ===
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
@@ -11,7 +14,9 @@ SONNET_MODEL = "claude-sonnet-4-6"
 HAIKU_MODEL = "claude-haiku-4-5-20251001"
 
 # === 데이터베이스 ===
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/ittf.db")
+_db_path = PROJECT_ROOT / "data" / "ittf.db"
+_db_path.parent.mkdir(parents=True, exist_ok=True)
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{_db_path}")
 
 # === 크롤링 스케줄 ===
 CRAWL_SCHEDULE = {
